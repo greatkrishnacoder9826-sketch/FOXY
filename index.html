@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>English Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #edf1f6;
+    --ink: #132238;
+    --muted: #55657a;
+    --line: #c9d3e0;
+    --marker: #ffd23f;
+    --pen: #d23b32;
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { height: 100%; }
+  body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 18px;
+    line-height: 1.5;
+  }
+  main {
+    max-width: 40rem;
+    margin: 0 auto;
+    padding: calc(env(safe-area-inset-top, 0px) + 1.5rem) 1.25rem 11rem;
+  }
+  h1 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 2.1rem;
+    line-height: 1.1;
+    margin: 0 0 .4rem;
+    letter-spacing: -0.01em;
+  }
+  .sub { margin: 0 0 2rem; color: var(--muted); }
+
+  /* access code */
+  #gate { padding: 1.25rem 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-bottom: 1.5rem; }
+  #gate label { display: block; font-weight: 600; margin-bottom: .5rem; }
+  #gate .row { display: flex; gap: .5rem; }
+  #gate input {
+    flex: 1; min-width: 0; font: inherit; padding: .65rem .8rem;
+    border: 1.5px solid var(--ink); border-radius: 6px; background: #fff; color: var(--ink);
+  }
+  #gate button {
+    font: inherit; font-weight: 600; padding: .65rem 1.1rem; border: 0; border-radius: 6px;
+    background: var(--ink); color: var(--paper); cursor: pointer;
+  }
+  #gateErr { color: var(--pen); margin: .5rem 0 0; min-height: 1.5em; }
+
+  /* feed */
+  #empty { color: var(--muted); }
+  #empty strong { color: var(--ink); font-weight: 600; }
+  .turn { padding: 1.5rem 0; border-top: 1px solid var(--line); }
+  .turn:first-child { border-top: 0; }
+  .said { margin: 0 0 .5rem; color: var(--muted); }
+  .fixed { margin: 0 0 .75rem; font-family: var(--display); font-weight: 600; font-size: 1.45rem; line-height: 1.3; }
+  .wrong {
+    text-decoration: underline wavy var(--pen);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 4px;
+    color: var(--ink);
+  }
+  mark.fix {
+    background: linear-gradient(transparent 12%, var(--marker) 12%, var(--marker) 92%, transparent 92%);
+    color: inherit;
+    padding: 0 .12em;
+    margin: 0 -.12em;
+  }
+  .why { margin: 0 0 1rem; }
+  .reply { margin: 0 0 .75rem; padding-left: .9rem; border-left: 3px solid var(--ink); }
+  .reply p { margin: 0 0 .25rem; }
+  .play {
+    font: inherit; font-size: .95rem; font-weight: 600; color: var(--ink);
+    background: transparent; border: 1.5px solid var(--ink); border-radius: 999px;
+    padding: .3rem .9rem; cursor: pointer; margin: 0 .5rem .25rem 0;
+  }
+  .play:hover { background: var(--ink); color: var(--paper); }
+  .working { color: var(--muted); }
+  .problem { color: var(--pen); font-weight: 600; }
+
+  /* record dock */
+  .dock {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    padding: 1rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1rem);
+    background: linear-gradient(to top, var(--paper) 70%, rgba(237,241,246,0));
+    display: flex; flex-direction: column; align-items: center; gap: .6rem;
+  }
+  #status { margin: 0; color: var(--muted); min-height: 1.5em; text-align: center; }
+  #mic {
+    position: relative; width: 5rem; height: 5rem; border-radius: 50%; border: 0;
+    background: var(--ink); color: var(--paper); cursor: pointer;
+    display: grid; place-items: center;
+  }
+  #mic svg { width: 2rem; height: 2rem; }
+  #mic[disabled] { opacity: .5; cursor: default; }
+  #mic.rec { background: var(--pen); }
+  #mic.rec::after {
+    content: ""; position: absolute; inset: -8px; border-radius: 50%;
+    border: 2px solid var(--pen); animation: ring 1.3s ease-out infinite;
+  }
+  @keyframes ring { from { transform: scale(.9); opacity: .9; } to { transform: scale(1.25); opacity: 0; } }
+  :focus-visible { outline: 3px solid var(--marker); outline-offset: 3px; box-shadow: 0 0 0 5px var(--ink); }
+  @media (prefers-reduced-motion: reduce) { #mic.rec::after { animation: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>English Coach</h1>
+  <p class="sub">Ek sentence bolo. Galti hui toh main sahi karke sunaunga.</p>
+
+  <section id="gate" hidden>
+    <label for="code">Access code</label>
+    <div class="row">
+      <input id="code" type="password" autocomplete="off" placeholder="Bhai ne jo code diya hai">
+      <button id="codeBtn" type="button">Start</button>
+    </div>
+    <p id="gateErr" role="alert"></p>
+  </section>
+
+  <section id="feed" aria-live="polite">
+    <p id="empty">Mic dabao aur koi bhi ek English sentence bolo, jaise <strong>"I go to market yesterday."</strong> Phir mic dobara dabao, sentence check ho jayega.</p>
+  </section>
+</main>
+
+<div class="dock">
+  <p id="status">Mic dabao aur bolo</p>
+  <button id="mic" type="button" aria-label="Recording shuru karo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="9" y="2" width="6" height="12" rx="3"></rect>
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v4"></path>
+    </svg>
+  </button>
+</div>
+
+<script>
+(() => {
+  const MAX_SECONDS = 55;   // Google sync STT ki limit 1 minute hai
+  const TARGET_RATE = 16000;
+
+  const $ = (id) => document.getElementById(id);
+  const mic = $("mic"), statusEl = $("status"), feed = $("feed"), gate = $("gate");
+  let code = localStorage.getItem("coachCode") || "";
+
+  // ---------- access code ----------
+  function showGate(msg) {
+    gate.hidden = false;
+    $("gateErr").textContent = msg || "";
+    mic.disabled = true;
+    $("code").focus();
+  }
+  $("codeBtn").addEventListener("click", () => {
+    const v = $("code").value.trim();
+    if (!v) { $("gateErr").textContent = "Pehle code likho."; return; }
+    code = v;
+    localStorage.setItem("coachCode", code);
+    gate.hidden = true;
+    mic.disabled = false;
+  });
+  $("code").addEventListener("keydown", (e) => { if (e.key === "Enter") $("codeBtn").click(); });
+  if (!code) showGate();
+
+  // ---------- recording (WAV, 16 kHz mono) ----------
+  let ctx, stream, source, proc, chunks = [], recording = false, startedAt = 0, timer;
+
+  async function startRecording() {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === "suspended") await ctx.resume();   // iPhone Safari ke liye
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true }
+      });
+    } catch (e) {
+      statusEl.textContent = "Mic ki permission chahiye. Browser settings mein allow karo.";
+      ctx.close();
+      return;
+    }
+    source = ctx.createMediaStreamSource(stream);
+    proc = ctx.createScriptProcessor(4096, 1, 1);
+    chunks = [];
+    proc.onaudioprocess = (e) => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    source.connect(proc);
+    proc.connect(ctx.destination);   // output khaali rehta hai, awaaz wapas nahi aati
+
+    recording = true;
+    startedAt = Date.now();
+    mic.classList.add("rec");
+    mic.setAttribute("aria-label", "Recording rok ke bhejo");
+    tick();
+    timer = setInterval(tick, 250);
+  }
+
+  function tick() {
+    const s = Math.floor((Date.now() - startedAt) / 1000);
+    statusEl.textContent = `Sun raha hoon... ${s}s. Bol chuke ho toh mic dobara dabao`;
+    if (s >= MAX_SECONDS) stopRecording();
+  }
+
+  async function stopRecording() {
+    if (!recording) return;
+    recording = false;
+    clearInterval(timer);
+    mic.classList.remove("rec");
+    mic.setAttribute("aria-label", "Recording shuru karo");
+    proc.disconnect(); source.disconnect();
+    stream.getTracks().forEach((t) => t.stop());
+    const rate = ctx.sampleRate;
+    ctx.close();
+
+    const total = chunks.reduce((n, c) => n + c.length, 0);
+    const merged = new Float32Array(total);
+    let off = 0;
+    for (const c of chunks) { merged.set(c, off); off += c.length; }
+    const wav = encodeWav(downsample(merged, rate, TARGET_RATE), TARGET_RATE);
+    await send(wav);
+  }
+
+  function downsample(buf, inRate, outRate) {
+    if (inRate === outRate) return buf;
+    const ratio = inRate / outRate, len = Math.floor(buf.length / ratio), out = new Float32Array(len);
+    for (let i = 0; i < len; i++) {
+      const a = Math.floor(i * ratio), b = Math.min(Math.floor((i + 1) * ratio), buf.length);
+      let sum = 0;
+      for (let k = a; k < b; k++) sum += buf[k];
+      out[i] = sum / (b - a || 1);
+    }
+    return out;
+  }
+
+  function encodeWav(samples, rate) {
+    const v = new DataView(new ArrayBuffer(44 + samples.length * 2));
+    const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    str(0, "RIFF"); v.setUint32(4, 36 + samples.length * 2, true); str(8, "WAVE"); str(12, "fmt ");
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    str(36, "data"); v.setUint32(40, samples.length * 2, true);
+    let o = 44;
+    for (let i = 0; i < samples.length; i++, o += 2) {
+      const s = Math.max(-1, Math.min(1, samples[i]));
+      v.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+    }
+    return new Blob([v], { type: "audio/wav" });
+  }
+
+  mic.addEventListener("click", () => { recording ? stopRecording() : startRecording(); });
+
+  // ---------- talk to backend ----------
+  async function send(wavBlob) {
+    $("empty")?.remove();
+    mic.disabled = true;
+    statusEl.textContent = "Check ho raha hai...";
+    const turn = document.createElement("article");
+    turn.className = "turn";
+    turn.innerHTML = '<p class="working">Sentence check ho raha hai...</p>';
+    feed.appendChild(turn);
+    turn.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    try {
+      const fd = new FormData();
+      fd.append("audio", wavBlob, "speech.wav");
+      const res = await fetch("/api/practice", { method: "POST", headers: { "X-Access-Code": code }, body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) {
+        turn.remove();
+        localStorage.removeItem("coachCode");
+        showGate("Code galat hai. Dobara likho.");
+        return;
+      }
+      if (!res.ok) throw new Error(data.detail || "Kuch gadbad ho gayi. Dobara try karo.");
+      renderTurn(turn, data);
+    } catch (e) {
+      turn.innerHTML = "";
+      const p = document.createElement("p");
+      p.className = "problem";
+      p.textContent = e.message;
+      turn.appendChild(p);
+    } finally {
+      if (gate.hidden) mic.disabled = false;
+      statusEl.textContent = "Mic dabao aur agla sentence bolo";
+    }
+  }
+
+  // ---------- word diff: kya badla? ----------
+  const norm = (w) => w.toLowerCase().replace(/[^a-z0-9']/g, "");
+  function diffWords(said, fixed) {
+    const A = said.split(/\s+/).filter(Boolean), B = fixed.split(/\s+/).filter(Boolean);
+    const n = A.length, m = B.length;
+    const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+    for (let i = n - 1; i >= 0; i--)
+      for (let j = m - 1; j >= 0; j--)
+        dp[i][j] = norm(A[i]) === norm(B[j]) ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    const aBad = new Array(n).fill(false), bBad = new Array(m).fill(false);
+    let i = 0, j = 0;
+    while (i < n && j < m) {
+      if (norm(A[i]) === norm(B[j])) { i++; j++; }
+      else if (dp[i + 1][j] >= dp[i][j + 1]) aBad[i++] = true;
+      else bBad[j++] = true;
+    }
+    while (i < n) aBad[i++] = true;
+    while (j < m) bBad[j++] = true;
+    return { A, B, aBad, bBad };
+  }
+
+  function words(container, list, flags, tag, cls) {
+    list.forEach((w, idx) => {
+      if (idx) container.append(" ");
+      if (flags[idx]) {
+        const el = document.createElement(tag);
+        if (cls) el.className = cls;
+        el.textContent = w;
+        container.appendChild(el);
+      } else {
+        container.append(w);
+      }
+    });
+  }
+
+  // ---------- audio playback ----------
+  let current;
+  function playData(b64) {
+    if (current) current.pause();
+    current = new Audio("data:audio/mpeg;base64," + b64);
+    return current.play();
+  }
+  function speakInBrowser(text) {
+    if (!("speechSynthesis" in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-IN";
+    speechSynthesis.speak(u);
+  }
+
+  function addButton(parent, label, onClick) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "play"; b.textContent = label;
+    b.addEventListener("click", onClick);
+    parent.appendChild(b);
+  }
+
+  function renderTurn(turn, d) {
+    turn.innerHTML = "";
+    const { A, B, aBad, bBad } = diffWords(d.transcript, d.corrected);
+
+    const said = document.createElement("p");
+    said.className = "said";
+    said.append("Tumne kaha: ");
+    words(said, A, aBad, "span", "wrong");
+    turn.appendChild(said);
+
+    const fixed = document.createElement("p");
+    fixed.className = "fixed";
+    words(fixed, B, bBad, "mark", "fix");
+    turn.appendChild(fixed);
+
+    if (d.explanation) {
+      const why = document.createElement("p");
+      why.className = "why";
+      why.textContent = d.explanation;
+      turn.appendChild(why);
+    }
+
+    const speakFixed = () => (d.audio ? playData(d.audio) : speakInBrowser(d.say));
+    addButton(turn, "Sahi sentence sunao", speakFixed);
+
+    if (d.reply) {
+      const r = document.createElement("div");
+      r.className = "reply";
+      const p = document.createElement("p");
+      p.textContent = d.reply;
+      r.appendChild(p);
+      addButton(r, "Sawal sunao", () => speakInBrowser(d.reply));
+      turn.appendChild(r);
+    }
+
+    // auto-play; kuch browsers block karte hain, tab button se sun lena
+    Promise.resolve(speakFixed()).catch(() => {});
+    turn.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,7 +1,6 @@
 fastapi
 uvicorn[standard]
 python-multipart
-google-cloud-speech
 groq
 elevenlabs
 edge-tts

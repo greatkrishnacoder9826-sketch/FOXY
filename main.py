@@ -12,8 +12,6 @@ import edge_tts
 from elevenlabs.client import ElevenLabs
 from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from google.cloud import speech
-from google.oauth2 import service_account
 from groq import Groq
 
 try:  # local testing ke liye .env padh lo (Render pe zaroorat nahi)
@@ -27,9 +25,10 @@ log = logging.getLogger("english-coach")
 BASE = Path(__file__).parent
 
 ACCESS_CODE = os.environ["ACCESS_CODE"]  # bina iske app start hi nahi hogi
-GROQ_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+GROQ_STT_MODEL = os.getenv("GROQ_STT_MODEL", "whisper-large-v3-turbo")
 ELEVEN_VOICE = os.getenv("ELEVEN_VOICE_ID", "JBFqnCBsd6RMkjVDRZzb")
-STT_MINUTES_LIMIT = float(os.getenv("STT_MINUTES_LIMIT", "55"))
+STT_SECONDS_LIMIT_PER_DAY = float(os.getenv("STT_SECONDS_LIMIT_PER_DAY", "25000"))
 MAX_UPLOAD = 3 * 1024 * 1024
 USAGE_FILE = BASE / "usage.json"
 
@@ -42,30 +41,21 @@ Reply ONLY with JSON in this exact shape:
 If the sentence is already correct, keep corrected the same as the input."""
 
 
-def make_stt_client() -> speech.SpeechClient:
-    raw = os.getenv("GOOGLE_CREDENTIALS_JSON")
-    if raw:  # Render: poora service-account JSON env var mein
-        creds = service_account.Credentials.from_service_account_info(json.loads(raw))
-        return speech.SpeechClient(credentials=creds)
-    return speech.SpeechClient()  # local: GOOGLE_APPLICATION_CREDENTIALS file
-
-
-stt_client = make_stt_client()
 groq_client = Groq(api_key=os.environ["GROQ_API_KEY"])
 eleven = ElevenLabs(api_key=os.environ["ELEVEN_API_KEY"])
 
 app = FastAPI()
 
 
-# ---------- Google STT usage counter (best effort) ----------
-def _month() -> str:
-    return datetime.date.today().strftime("%Y-%m")
+# ---------- Groq STT usage counter (best effort, resets daily) ----------
+def _day() -> str:
+    return datetime.date.today().isoformat()
 
 
 def stt_seconds_used() -> float:
     try:
         d = json.loads(USAGE_FILE.read_text())
-        return float(d["seconds"]) if d["month"] == _month() else 0.0
+        return float(d["seconds"]) if d["day"] == _day() else 0.0
     except Exception:
         return 0.0
 
@@ -73,7 +63,7 @@ def stt_seconds_used() -> float:
 def add_stt_seconds(seconds: float) -> None:
     try:
         USAGE_FILE.write_text(
-            json.dumps({"month": _month(), "seconds": stt_seconds_used() + seconds})
+            json.dumps({"day": _day(), "seconds": stt_seconds_used() + seconds})
         )
     except Exception:
         pass
@@ -81,14 +71,14 @@ def add_stt_seconds(seconds: float) -> None:
 
 # ---------- pipeline steps ----------
 def speech_to_text(wav: bytes) -> str:
-    config = speech.RecognitionConfig(
-        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
-        sample_rate_hertz=16000,
-        language_code="en-IN",
-        enable_automatic_punctuation=True,
+    resp = groq_client.audio.transcriptions.create(
+        file=("speech.wav", wav, "audio/wav"),
+        model=GROQ_STT_MODEL,
+        language="en",
+        response_format="text",
     )
-    resp = stt_client.recognize(config=config, audio=speech.RecognitionAudio(content=wav))
-    return " ".join(r.alternatives[0].transcript.strip() for r in resp.results).strip()
+    # SDK returns either a plain string or an object with .text depending on response_format
+    return (resp if isinstance(resp, str) else resp.text).strip()
 
 
 def ask_llm(text: str) -> dict:
@@ -162,8 +152,8 @@ async def practice(audio: UploadFile = File(...), x_access_code: str = Header(de
     seconds = max(0.0, (len(wav) - 44) / 32000)  # 16 kHz, 16-bit, mono
     if seconds < 0.4:
         raise HTTPException(422, "Recording bahut chhoti thi. Dobara bolo.")
-    if (stt_seconds_used() + seconds) / 60 > STT_MINUTES_LIMIT:
-        raise HTTPException(429, "Is mahine ki free speech limit khatam ho gayi. Agle mahine try karo.")
+    if stt_seconds_used() + seconds > STT_SECONDS_LIMIT_PER_DAY:
+        raise HTTPException(429, "Aaj ki free speech limit khatam ho gayi. Kal try karo.")
 
     try:
         transcript = await asyncio.to_thread(speech_to_text, wav)

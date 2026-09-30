@@ -15,5 +15,3 @@ services:
         sync: false
       - key: ELEVEN_API_KEY
         sync: false
-      - key: GOOGLE_CREDENTIALS_JSON
-        sync: false

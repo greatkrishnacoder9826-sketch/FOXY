@@ -9,12 +9,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --paper: #edf1f6;
-    --ink: #132238;
-    --muted: #55657a;
-    --line: #c9d3e0;
-    --marker: #ffd23f;
-    --pen: #d23b32;
+    --bg: #04050d;
+    --bg2: #070a1c;
+    --ink: #eaf3ff;
+    --muted: #8ea3c9;
+    --line: rgba(120, 170, 255, 0.18);
+    --neon: #3fc7ff;
+    --neon2: #7ee8ff;
+    --dot: #3bf2b0;
+    --marker: rgba(63, 199, 255, 0.28);
+    --pen: #ff6a6a;
     --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
     --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
   }
@@ -23,16 +27,59 @@
   body {
     margin: 0;
     min-height: 100%;
-    background: var(--paper);
+    background: var(--bg);
     color: var(--ink);
     font-family: var(--body);
     font-size: 18px;
     line-height: 1.5;
+    position: relative;
+    overflow-x: hidden;
   }
+
+  /* glowing wave + scattered dots, layered behind everything */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background:
+      radial-gradient(ellipse 70% 45% at 50% 78%, rgba(63,199,255,0.35), transparent 70%),
+      radial-gradient(ellipse 40% 30% at 65% 85%, rgba(126,232,255,0.3), transparent 65%),
+      radial-gradient(ellipse 90% 60% at 50% 100%, rgba(40,70,160,0.35), transparent 70%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg2) 55%, #0b1130 100%);
+    filter: blur(2px);
+    animation: drift 16s ease-in-out infinite alternate;
+  }
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image:
+      radial-gradient(var(--dot) 1.3px, transparent 1.6px),
+      radial-gradient(var(--dot) 1px, transparent 1.4px);
+    background-size: 140px 140px, 95px 95px;
+    background-position: 10px 20px, 60px 90px;
+    opacity: 0.35;
+    animation: twinkle 5s ease-in-out infinite;
+  }
+  @keyframes drift {
+    from { transform: translateY(0) scale(1); }
+    to { transform: translateY(-14px) scale(1.03); }
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.22; }
+    50% { opacity: 0.45; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body::before, body::after { animation: none; }
+  }
+
   main {
     max-width: 40rem;
     margin: 0 auto;
     padding: calc(env(safe-area-inset-top, 0px) + 1.5rem) 1.25rem 11rem;
+    position: relative;
   }
   h1 {
     font-family: var(--display);
@@ -41,104 +88,153 @@
     line-height: 1.1;
     margin: 0 0 .4rem;
     letter-spacing: -0.01em;
+    color: #fff;
+    text-shadow: 0 0 18px rgba(63,199,255,0.45);
   }
   .sub { margin: 0 0 2rem; color: var(--muted); }
 
   /* access code */
-  #gate { padding: 1.25rem 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-bottom: 1.5rem; }
-  #gate label { display: block; font-weight: 600; margin-bottom: .5rem; }
+  #gate {
+    padding: 1.25rem; margin-bottom: 1.5rem; border-radius: 14px;
+    border: 1px solid var(--line); background: rgba(10,16,40,0.55);
+    backdrop-filter: blur(10px);
+  }
+  #gate label { display: block; font-weight: 600; margin-bottom: .5rem; color: var(--neon2); }
   #gate .row { display: flex; gap: .5rem; }
   #gate input {
     flex: 1; min-width: 0; font: inherit; padding: .65rem .8rem;
-    border: 1.5px solid var(--ink); border-radius: 6px; background: #fff; color: var(--ink);
+    border: 1.5px solid var(--line); border-radius: 8px;
+    background: rgba(255,255,255,0.04); color: var(--ink);
   }
+  #gate input:focus { border-color: var(--neon); }
   #gate button {
-    font: inherit; font-weight: 600; padding: .65rem 1.1rem; border: 0; border-radius: 6px;
-    background: var(--ink); color: var(--paper); cursor: pointer;
+    font: inherit; font-weight: 600; padding: .65rem 1.1rem; border: 0; border-radius: 8px;
+    background: linear-gradient(135deg, var(--neon), #6a5cff); color: #04101c; cursor: pointer;
+    box-shadow: 0 0 20px rgba(63,199,255,0.4);
   }
   #gateErr { color: var(--pen); margin: .5rem 0 0; min-height: 1.5em; }
 
   /* feed */
   #empty { color: var(--muted); }
-  #empty strong { color: var(--ink); font-weight: 600; }
-  .turn { padding: 1.5rem 0; border-top: 1px solid var(--line); }
-  .turn:first-child { border-top: 0; }
+  #empty strong { color: var(--neon2); font-weight: 600; }
+  .turn {
+    padding: 1.5rem; margin: 0 0 1rem; border-radius: 16px;
+    border: 1px solid var(--line); background: rgba(10,16,40,0.45);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 0 1px rgba(63,199,255,0.04), 0 10px 30px rgba(0,0,0,0.35);
+  }
   .said { margin: 0 0 .5rem; color: var(--muted); }
-  .fixed { margin: 0 0 .75rem; font-family: var(--display); font-weight: 600; font-size: 1.45rem; line-height: 1.3; }
+  .fixed { margin: 0 0 .75rem; font-family: var(--display); font-weight: 600; font-size: 1.45rem; line-height: 1.3; color: #fff; }
   .wrong {
     text-decoration: underline wavy var(--pen);
     text-decoration-thickness: 1.5px;
     text-underline-offset: 4px;
-    color: var(--ink);
+    color: #ffb3b3;
   }
   mark.fix {
-    background: linear-gradient(transparent 12%, var(--marker) 12%, var(--marker) 92%, transparent 92%);
-    color: inherit;
-    padding: 0 .12em;
-    margin: 0 -.12em;
+    background: var(--marker);
+    color: var(--neon2);
+    box-shadow: 0 0 12px rgba(63,199,255,0.35) inset;
+    border-radius: 4px;
+    padding: 0 .3em;
+    margin: 0 .05em;
   }
-  .why { margin: 0 0 1rem; }
-  .reply { margin: 0 0 .75rem; padding-left: .9rem; border-left: 3px solid var(--ink); }
-  .reply p { margin: 0 0 .25rem; }
+  .why { margin: 0 0 1rem; color: var(--ink); }
+  .reply { margin: 0; padding-left: .9rem; border-left: 3px solid var(--neon); }
+  .reply p { margin: 0 0 .25rem; color: var(--ink); }
   .play {
-    font: inherit; font-size: .95rem; font-weight: 600; color: var(--ink);
-    background: transparent; border: 1.5px solid var(--ink); border-radius: 999px;
-    padding: .3rem .9rem; cursor: pointer; margin: 0 .5rem .25rem 0;
+    font: inherit; font-size: .95rem; font-weight: 600; color: var(--neon2);
+    background: rgba(63,199,255,0.08); border: 1.5px solid var(--neon);
+    border-radius: 999px; padding: .3rem .9rem; cursor: pointer; margin: 0 .5rem .25rem 0;
+    box-shadow: 0 0 14px rgba(63,199,255,0.18);
   }
-  .play:hover { background: var(--ink); color: var(--paper); }
+  .play:hover { background: var(--neon); color: #04101c; }
   .working { color: var(--muted); }
   .problem { color: var(--pen); font-weight: 600; }
 
   /* record dock */
   .dock {
     position: fixed; left: 0; right: 0; bottom: 0;
-    padding: 1rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1rem);
-    background: linear-gradient(to top, var(--paper) 70%, rgba(237,241,246,0));
-    display: flex; flex-direction: column; align-items: center; gap: .6rem;
+    padding: 1.2rem 1rem calc(env(safe-area-inset-bottom, 0px) + 1.2rem);
+    background: linear-gradient(to top, rgba(4,5,13,0.95) 55%, rgba(4,5,13,0));
+    display: flex; flex-direction: column; align-items: center; gap: .7rem;
   }
   #status { margin: 0; color: var(--muted); min-height: 1.5em; text-align: center; }
+
+  /* extraordinary mic button: glass orb + gradient ring + pulse halo */
   #mic {
-    position: relative; width: 5rem; height: 5rem; border-radius: 50%; border: 0;
-    background: var(--ink); color: var(--paper); cursor: pointer;
-    display: grid; place-items: center;
+    position: relative; width: 6rem; height: 6rem; border-radius: 50%; border: 0;
+    cursor: pointer; display: grid; place-items: center;
+    background:
+      radial-gradient(circle at 35% 30%, rgba(255,255,255,0.35), transparent 45%),
+      radial-gradient(circle at 60% 70%, rgba(63,199,255,0.55), rgba(10,16,40,0.9) 70%);
+    box-shadow:
+      0 0 0 1px rgba(126,232,255,0.5),
+      0 0 25px rgba(63,199,255,0.55),
+      0 0 60px rgba(63,199,255,0.3),
+      inset 0 0 18px rgba(255,255,255,0.15);
+    transition: transform .15s ease;
   }
-  #mic svg { width: 2rem; height: 2rem; }
-  #mic[disabled] { opacity: .5; cursor: default; }
-  #mic.rec { background: var(--pen); }
-  #mic.rec::after {
-    content: ""; position: absolute; inset: -8px; border-radius: 50%;
-    border: 2px solid var(--pen); animation: ring 1.3s ease-out infinite;
+  #mic:hover { transform: scale(1.04); }
+  #mic:active { transform: scale(0.97); }
+  #mic svg { width: 2.3rem; height: 2.3rem; position: relative; z-index: 2;
+    filter: drop-shadow(0 0 6px rgba(255,255,255,0.8)); }
+  #mic::before, #mic::after {
+    content: ""; position: absolute; inset: -10px; border-radius: 50%;
+    border: 1.5px solid rgba(63,199,255,0.55); opacity: 0;
   }
-  @keyframes ring { from { transform: scale(.9); opacity: .9; } to { transform: scale(1.25); opacity: 0; } }
-  :focus-visible { outline: 3px solid var(--marker); outline-offset: 3px; box-shadow: 0 0 0 5px var(--ink); }
-  @media (prefers-reduced-motion: reduce) { #mic.rec::after { animation: none; } }
+  #mic[disabled] { opacity: .45; cursor: default; }
+  #mic.rec {
+    background:
+      radial-gradient(circle at 35% 30%, rgba(255,255,255,0.35), transparent 45%),
+      radial-gradient(circle at 60% 70%, rgba(255,106,106,0.6), rgba(40,8,8,0.9) 70%);
+    box-shadow:
+      0 0 0 1px rgba(255,150,150,0.6),
+      0 0 25px rgba(255,106,106,0.6),
+      0 0 60px rgba(255,106,106,0.35),
+      inset 0 0 18px rgba(255,255,255,0.15);
+  }
+  #mic.rec::before { animation: ring 1.6s ease-out infinite; border-color: rgba(255,106,106,0.6); }
+  #mic.rec::after { animation: ring 1.6s ease-out infinite .5s; border-color: rgba(255,106,106,0.4); }
+  @keyframes ring {
+    0% { transform: scale(.85); opacity: .9; }
+    100% { transform: scale(1.5); opacity: 0; }
+  }
+  :focus-visible { outline: 2px solid var(--neon2); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) { #mic.rec::before, #mic.rec::after { animation: none; } }
 </style>
 </head>
 <body>
 <main>
-  <h1>English Coach</h1>
-  <p class="sub">Ek sentence bolo. Galti hui toh main sahi karke sunaunga.</p>
+  <h1>_F_O_X_Y_</h1>
+  <p class="sub"></p>
 
   <section id="gate" hidden>
     <label for="code">Access code</label>
     <div class="row">
-      <input id="code" type="password" autocomplete="off" placeholder="Bhai ne jo code diya hai">
+      <input id="code" type="password" autocomplete="off" placeholder="Enter the password">
       <button id="codeBtn" type="button">Start</button>
     </div>
     <p id="gateErr" role="alert"></p>
   </section>
 
   <section id="feed" aria-live="polite">
-    <p id="empty">Mic dabao aur koi bhi ek English sentence bolo, jaise <strong>"I go to market yesterday."</strong> Phir mic dobara dabao, sentence check ho jayega.</p>
+    <p id="empty"><strong>""</strong></p>
   </section>
 </main>
 
 <div class="dock">
-  <p id="status">Mic dabao aur bolo</p>
-  <button id="mic" type="button" aria-label="Recording shuru karo">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <rect x="9" y="2" width="6" height="12" rx="3"></rect>
-      <path d="M5 11a7 7 0 0 0 14 0M12 18v4"></path>
+  <p id="status">Press The Mic and Say Something</p>
+  <button id="mic" type="button" aria-label="Recording Start Karo">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <defs>
+        <linearGradient id="micGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="100%" stop-color="#bfe9ff"/>
+        </linearGradient>
+      </defs>
+      <rect x="9" y="2" width="6" height="12" rx="3" fill="url(#micGrad)"></rect>
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v4" stroke="url(#micGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
     </svg>
   </button>
 </div>
@@ -382,7 +478,7 @@
       turn.appendChild(r);
     }
 
-    // auto-play; kuch browsers block karte hain, tab button se sun lena
+    
     Promise.resolve(speakFixed()).catch(() => {});
     turn.scrollIntoView({ behavior: "smooth", block: "start" });
   }
